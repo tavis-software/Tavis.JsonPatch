@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Tavis
+namespace Tavis.JsonPatch
 {
     public abstract class Operation
     {
@@ -33,131 +33,17 @@ namespace Tavis
         }
 
         public abstract void Read(JObject jOperation);
-    }
 
-    public class AddOperation : Operation
-    {
-        public JToken Value { get; set; }
-
-        public override void Write(JsonWriter writer)
+        public static Operation Parse(string json)
         {
-            writer.WriteStartObject();
-
-            WriteOp(writer, "add");
-            WritePath(writer,Path);
-            WriteValue(writer,Value);
-
-            writer.WriteEndObject();
+            return Build(JObject.Parse(json));
         }
 
-        public override void Read(JObject jOperation)
+        public static Operation Build(JObject jOperation)
         {
-            Path = new JsonPointer((string)jOperation.GetValue("path"));
-            Value = jOperation.GetValue("value");
+            var op = PatchDocument.CreateOperation((string)jOperation["op"]);
+            op.Read(jOperation);
+            return op;
         }
     }
-    public class CopyOperation : Operation
-    {
-        public JsonPointer FromPath { get; set; }
-
-        public override void Write(JsonWriter writer)
-        {
-            writer.WriteStartObject();
-
-            WriteOp(writer, "copy");
-            WritePath(writer, Path);
-            WriteFromPath(writer, FromPath);
-
-            writer.WriteEndObject();
-        }
-
-        public override void Read(JObject jOperation)
-        {
-            Path = new JsonPointer((string)jOperation.GetValue("path"));
-            FromPath = new JsonPointer((string)jOperation.GetValue("from"));
-        }
-    }
-    public class MoveOperation : Operation
-    {
-        public JsonPointer FromPath { get; set; }
-
-        public override void Write(JsonWriter writer)
-        {
-            writer.WriteStartObject();
-
-            WriteOp(writer, "move");
-            WritePath(writer, Path);
-            WriteFromPath(writer, FromPath);
-
-            writer.WriteEndObject();
-        }
-
-        public override void Read(JObject jOperation)
-        {
-            Path = new JsonPointer((string)jOperation.GetValue("path"));
-            FromPath = new JsonPointer((string)jOperation.GetValue("from"));
-        }
-    }
-    public class RemoveOperation : Operation
-    {
-        
-        public override void Write(JsonWriter writer)
-        {
-            writer.WriteStartObject();
-
-            WriteOp(writer, "remove");
-            WritePath(writer, Path);
-
-            writer.WriteEndObject();
-        }
-
-        public override void Read(JObject jOperation)
-        {
-            Path = new JsonPointer((string)jOperation.GetValue("path"));   
-        }
-    }
-    public class ReplaceOperation : Operation
-    {
-        public JToken Value { get; set; }
-
-        public override void Write(JsonWriter writer)
-        {
-            writer.WriteStartObject();
-
-            WriteOp(writer, "replace");
-            WritePath(writer, Path);
-            WriteValue(writer, Value);
-
-            writer.WriteEndObject();
-        }
-
-        public override void Read(JObject jOperation)
-        {
-            Path = new JsonPointer((string)jOperation.GetValue("path"));
-            Value = jOperation.GetValue("value");
-        }
-    }
-    public class TestOperation : Operation
-    {
-        public JToken Value { get; set; }
-
-        public override void Write(JsonWriter writer)
-        {
-            writer.WriteStartObject();
-
-            WriteOp(writer, "test");
-            WritePath(writer, Path);
-            WriteValue(writer, Value);
-
-            writer.WriteEndObject();
-        }
-
-        public override void Read(JObject jOperation)
-        {
-            Path = new JsonPointer((string)jOperation.GetValue("path"));
-            Value = jOperation.GetValue("value");
-        }
-    }
-    
-
 }

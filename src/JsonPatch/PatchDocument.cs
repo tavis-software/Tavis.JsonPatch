@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Tavis
+namespace Tavis.JsonPatch
 {
     public class PatchDocument
     {
@@ -25,18 +25,7 @@ namespace Tavis
             get { return _Operations; }
         }
 
-        public void ApplyTo(JToken jToken)
-        {
-            ApplyTo(new JsonNetTargetAdapter(jToken));
-        }
-
-        public void ApplyTo(IPatchTarget target)
-        {
-            foreach (var operation in Operations)
-            {
-                target.ApplyOperation(operation);
-            }
-        }
+        
 
         public void AddOperation(Operation operation)
         {
@@ -60,15 +49,14 @@ namespace Tavis
             {
                 foreach (var jOperation in root.Children().Cast<JObject>())
                 {
-                    var op = CreateOperation((string)jOperation["op"]);
-                    op.Read(jOperation);
+                    var op = Operation.Build(jOperation);
                     document.AddOperation(op);
                 }
             }
             return document;
         }
 
-        private static Operation CreateOperation(string op)
+        public static Operation CreateOperation(string op)
         {
             switch (op)
             {
@@ -89,7 +77,7 @@ namespace Tavis
         public MemoryStream ToStream()
         {
             var stream = new MemoryStream();
-            CopyToStream(stream);
+            CopyToStream(stream, Formatting.Indented);
             stream.Flush();
             stream.Position = 0;
             return stream;
@@ -99,10 +87,11 @@ namespace Tavis
         /// Copy serialized version of Patch document to provided stream
         /// </summary>
         /// <param name="stream"></param>
-        public void CopyToStream(Stream stream)
+        /// <param name="formatting"></param>
+        public void CopyToStream(Stream stream, Formatting formatting = Formatting.Indented)
         {
             var sw = new JsonTextWriter(new StreamWriter(stream));
-            sw.Formatting = Formatting.Indented;
+            sw.Formatting = formatting;
 
             sw.WriteStartArray();
 
@@ -117,7 +106,22 @@ namespace Tavis
             sw.Flush();
         }
 
+        public override string ToString()
+        {
+            return ToString(Formatting.Indented);
+        }
 
-     
+        public string ToString(Formatting formatting)
+        {
+            using (var ms = new MemoryStream())
+            {
+                CopyToStream(ms, formatting);
+                ms.Position = 0;
+                using (StreamReader reader = new StreamReader(ms, Encoding.UTF8))
+                {
+                    return reader.ReadToEnd();
+                }
+            }
+        }
     }
 }
